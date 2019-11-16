@@ -8,6 +8,7 @@ import java.rmi.RemoteException;
 public class GumballMonitorTestDrive {
 
     public static void main(String[] args) {
+
         String[] location = {"123","456","789"};
 
         GumballMonitor[] monitor = new GumballMonitor[location.length];
