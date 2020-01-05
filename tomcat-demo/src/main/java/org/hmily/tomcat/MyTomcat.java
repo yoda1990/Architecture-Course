@@ -5,13 +5,10 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpRequestDecoder;
 import io.netty.handler.codec.http.HttpResponseEncoder;
-
 import java.io.*;
-import java.net.ServerSocket;
-import java.net.Socket;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -20,9 +17,7 @@ public class MyTomcat {
 
     private static final int port = 8080;
 
-    private ServerSocket serverSocket;
-
-    private Map<String,MyServlet> servletMap = new HashMap<String,MyServlet>();
+    private static Map<String,MyServlet> servletMap = new HashMap<String,MyServlet>();
 
     private Properties webXml = new Properties();
 
@@ -37,9 +32,9 @@ public class MyTomcat {
             for (Object k:webXml.keySet()){
                 String key = k.toString();
                 if (key.endsWith(".url")){
-                    String servletName = key.replaceAll("\\.url$","");
+                    String servletName = key.replaceAll("\\.url$", "");
                     String url = webXml.getProperty(key);
-                    String className = webXml.getProperty(servletName+".className");
+                    String className = webXml.getProperty(servletName + ".className");
                     MyServlet myServlet = (MyServlet) Class.forName(className).newInstance();
                     servletMap.put(url,myServlet);
                 }
@@ -55,24 +50,6 @@ public class MyTomcat {
             e.printStackTrace();
         } catch (InstantiationException e) {
             e.printStackTrace();
-        }
-    }
-
-    /**
-     * 执行 http请求逻辑
-     * @param client
-     * @throws IOException
-     */
-    private void process(Socket client) throws IOException {
-        InputStream is = client.getInputStream();
-        OutputStream os = client.getOutputStream();
-        MyRequest myRequest = new MyRequest(is);
-        MyResponse myResponse = new MyResponse(os);
-        String url = myRequest.getUrl();
-        if (servletMap.containsKey(url)){
-            servletMap.get(url).service(myRequest,myResponse);
-        }else {
-            myResponse.write("404-NOT FOUND");
         }
     }
 
@@ -100,6 +77,7 @@ public class MyTomcat {
                         .childOption(ChannelOption.SO_KEEPALIVE, true); // (6)
                 // Bind and start to accept incoming connections.
                 ChannelFuture f = b.bind(port).sync(); // (7)
+                System.out.println("MyTomcat start port :" + port);
                 f.channel().closeFuture().sync();
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -117,12 +95,23 @@ public class MyTomcat {
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-
+            if (msg instanceof HttpRequest) {
+                HttpRequest httpRequest = (HttpRequest) msg;
+                MyRequest myRequest = new MyRequest(ctx,httpRequest);
+                MyResponse myResponse = new MyResponse(ctx);
+                // 实际业务处理
+                String url = myRequest.getUrl();
+                if (servletMap.containsKey(url)){
+                    servletMap.get(url).service(myRequest,myResponse);
+                }else {
+                    myResponse.write("404-NOT FOUND");
+                }
+            }
         }
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            super.exceptionCaught(ctx, cause);
+            System.out.println("Tomcat HTTP Exception!!!");
         }
     }
 
