@@ -7,8 +7,8 @@ public class RpcClientApplication {
 
     public static void main(String[] args) {
         RpcProxyClient proxyClient = new RpcProxyClient();
-        //TestApi testApi = proxyClient.proxyClient(TestApi.class,"localhost",8080);
-        TestApi testApi = proxyClient.proxyNettyClient(TestApi.class,"localhost",8080);
+        //TestApi testApi = proxyClient.proxyNettyClient(TestApi.class,"localhost",8080);
+        TestApi testApi = proxyClient.proxyRegistryClient(TestApi.class);
         String  result = testApi.sayHello("Hmily");
         System.out.println(result);
 
